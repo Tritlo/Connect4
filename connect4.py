@@ -44,6 +44,18 @@ class connect4(object):
         
 
 if __name__=="__main__":
+    def colorPrinter(x):
+        BLUE = '\033[34m'
+        GREEN = '\033[32m'
+        YELLOW = '\033[33m'
+        RED = '\033[31m'
+        ENDC = '\033[0m'
+        
+        START = "" if x ==0 else RED if x < 0 else BLUE
+        ADDSPACE = ' ' if x >= 0 else ""
+        return START + ADDSPACE+ ("%.0f." % x) + ENDC
+    if color:
+        set_printoptions(formatter = {"float":colorPrinter})
     c4 = connect4()
     c4.simulate(0,1)
     c4.simulate(0,-1)
