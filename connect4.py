@@ -53,7 +53,7 @@ class connect4(object):
         self.win = self.checkwin(self.state)
         return self.state, self.win
         
-    def rollout(self,move):
+    def rollout(self,move, pickObvious = False):
         sumReward = 0
         for i in range(5):
             simulation = self.copy()
@@ -107,6 +107,12 @@ class connect4(object):
             return 0
         return None
 
+def resultsToString(results):
+    st = ""
+    for color in [-1,0,1]:
+        st += colors[color] + ": "+ str(results[color]) + " "  if color in results else ""
+    return st    
+
 def colorPrinter(x):
     GREEN = '\033[32m'
     YELLOW = '\033[33m'
@@ -115,7 +121,7 @@ def colorPrinter(x):
     RED = '\033[31m'
     ENDC = '\033[0m'
 
-    START = "" if x ==0 else RED if x < 0 else BLUE
+    START = "" if x ==0 else BLUE if x < 0 else RED
     ADDSPACE = ' ' if x >= 0 else ""
     if x == 0:
         return "   "
@@ -145,22 +151,20 @@ if __name__=="__main__":
     """
     
     color = True
-
-    def getInput(currPlayer):
-        col = int(input("Player " + COLOR + ("%d" % (currPlayer,))\
-                        +ENDC+", Enter column: "))
-        while col not in range(6):
-            print("Incorrect move!")
-            col = int(input("Player " + COLOR + ("%d" % (currPlayer,))\
-                            +ENDC+", Enter column: "))
-        return col
-        
-
-    
     GREEN = '\033[32m'
     BLUE = '\033[34m'
     RED = '\033[31m'
     ENDC = '\033[0m'
+
+    colors = {-1: BLUE+"Blue"+ENDC, 0: "Ties", 1: RED+"Red"+ENDC}
+    def getInput(currPlayer):
+        col = int(input(colors[currPlayer] + " player, enter column: "))
+        while col not in range(6):
+            print("Incorrect move!")
+            col = int(input(colors[currPlayer] + " player, enter column: "))
+        return col
+        
+
     play = True
     numPlayers = -1
     while numPlayers not in range(3):
@@ -171,24 +175,32 @@ if __name__=="__main__":
         print("Available opponents:")
         for i,opponent in enumerate(posopponents):
             print("%d. %s" % (i, opponent))
-        opponentChoices[-1] = posopponents[int(input("Pick opponent for -1: "))]
+        opponentChoices[-1] = posopponents[int(input("Pick opponent for "+ colors[-1] +": "))]
         if numPlayers == 0:
-            opponentChoices[1] = posopponents[int(input("Pick opponent for 1: "))]
+            opponentChoices[1] = posopponents[int(input("Pick opponent for "+ colors[1] +": "))]
         
         
     results = {-1: 0, 0: 0, 1: 0}
-    autoplayRounds = 60
+    totalRoundsToPlay = 10
+    playedRounds = 0
     interactive = False
+    startingPlayer = 1
+    BLUE = '\033[34m'
+    RED = '\033[31m'
+    ENDC = '\033[0m'
+        
     while play:
-        c4 = connect4()
+        c4 = connect4(currPlayer = startingPlayer)
         opponentActions = {"random": c4.makeRandomMove, "MC": c4.monteCarloPlay}
         win = None
         while win is None:
             print(c4)
-            print(results)
+            print("Score: ")
+            print(resultsToString(results))
             currPlayer = c4.currPlayer
-            COLOR = BLUE if currPlayer > 0 else RED
             if numPlayers == 0:
+                print("Method: ")
+                print(resultsToString(opponentChoices))
                 state, win = opponentActions[opponentChoices[currPlayer]]()
             elif numPlayers == 1:
                 if currPlayer == 1:
@@ -203,18 +215,28 @@ if __name__=="__main__":
                 
 
         print(c4)
-        COLOR = BLUE if win > 0 else RED
+        #COLOR = BLUE if win > 0 else RED
         if win != 0:
-            print("Player " + COLOR + ("%d" % (win,)) +ENDC+" wins!")
+            print( colors[win] +" player wins!")
         else:
-            print(COLOR + "TIE!"+ENDC)
+            print(RED + "Tie!" +ENDC)
         results[win] += 1
+        playedRounds += 1
         if interactive:
             play = input("Play Again, Y/N? ") not in ["N","n","no"]
         else:
-            autoplayRounds -= 1
-            play = autoplayRounds > 0
-    print(results)
+            play = playedRounds < totalRoundsToPlay
+            if playedRounds == totalRoundsToPlay/2:
+                print("Swapping players")
+                startingPlayer = -1
+                #opponentChoices[-1],opponentChoices[1] = opponentChoices[1],opponentChoices[-1]
+                #swapped = 1
+    print("Final score: ")
+    print(resultsToString(results))
+    if opponentChoices:
+        print("Methods: ")
+        print(resultsToString(opponentChoices))
+        
             
         
     
