@@ -1,8 +1,8 @@
 from pylab import *
-
 from util import *
 
-class connect4:
+
+class connect4(object):
     #Creates new game
     def __init__(self, shape = (7,6)):
         self.shape = shape 
@@ -22,6 +22,9 @@ class connect4:
         self.state = transpose(t)
         self.win = self.checkwin(colour,row,column)
         return self.state, self.win
+    
+    def __str__(self):
+        return str(self.state)
 
     def reward(self, colour, row, column):
         return win
@@ -78,6 +81,20 @@ if __name__=="__main__":
     c4.simulate(3,1)
     c4.simulate(3,1)
     c4.simulate(3,1)
-    print c4.simulate(3,-1)
-    print c4.state
+    #print(c4.simulate(3,-1))
+    #print(c4)
+    c4 = connect4()
+    currPlayer = 1
+    print(c4)
+    col = int(input("Player %d, Enter column: " % (currPlayer,)))
+    state, win = c4.simulate(col,currPlayer)
+    while win is None:
+        currPlayer *= -1
+        print(c4)
+        col = int(input("Player %d, Enter column: " % (currPlayer,)))
+        state, win = c4.simulate(col,currPlayer)
+
+    print(c4)
+    print("Player %d wins!" % (win,))
+        
     
