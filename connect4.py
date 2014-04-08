@@ -24,7 +24,17 @@ class connect4(object):
         return self.state, self.win
     
     def __str__(self):
-        return str(self.state)
+        BLUE = '\033[34m'
+        ENDC = '\033[0m'
+        header = "\n ["
+        header += BLUE +" 0"
+        header += "   1"
+        header += "   2"
+        header += "   3"
+        header += "   4"
+        header += "   5"+ ENDC
+        header += " ]\n\n" 
+        return  header + str(self.state) + "\n"
 
     def reward(self, colour, row, column):
         return win
@@ -41,21 +51,22 @@ class connect4(object):
             return 0
         return None
 
+def colorPrinter(x):
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLACK = '\033[30m'
+    BLUE = '\033[34m'
+    RED = '\033[31m'
+    ENDC = '\033[0m'
+
+    START = "" if x ==0 else RED if x < 0 else BLUE
+    ADDSPACE = ' ' if x >= 0 else ""
+    if x == 0:
+        return "   "
+    return START + ADDSPACE+ ("%.0f." % x) + ENDC
         
 
 if __name__=="__main__":
-    def colorPrinter(x):
-        BLUE = '\033[34m'
-        GREEN = '\033[32m'
-        YELLOW = '\033[33m'
-        RED = '\033[31m'
-        ENDC = '\033[0m'
-        
-        START = "" if x ==0 else RED if x < 0 else BLUE
-        ADDSPACE = ' ' if x >= 0 else ""
-        return START + ADDSPACE+ ("%.0f." % x) + ENDC
-    if color:
-        set_printoptions(formatter = {"float":colorPrinter})
     c4 = connect4()
     c4.simulate(0,1)
     c4.simulate(0,-1)
@@ -65,28 +76,49 @@ if __name__=="__main__":
     c4.simulate(2,1)
     c4.simulate(2,1)
     c4.simulate(2,1)
+    c4.simulate(4,1)
+    c4.simulate(5,1)
     c4.simulate(2,-1)
     c4.simulate(3,-1)
     c4.simulate(3,1)
     print(c4.simulate(3,1))
     print(c4.simulate(3,-1))
     print(c4.simulate(3,-1))
+    
+    color = True
+    if color:
+        set_printoptions(linewidth = 79,formatter = {"float":colorPrinter})
+
+
     print(c4)
     
-    play = False
-    if play:
+    GREEN = '\033[32m'
+    BLUE = '\033[34m'
+    RED = '\033[31m'
+    ENDC = '\033[0m'
+    play = True
+    while play:
         c4 = connect4()
-        currPlayer = 1
-        print(c4)
-        col = int(input("Player %d, Enter column: " % (currPlayer,)))
-        state, win = c4.simulate(col,currPlayer)
+        currPlayer = -1
+        win = None
         while win is None:
             currPlayer *= -1
             print(c4)
-            col = int(input("Player %d, Enter column: " % (currPlayer,)))
+            COLOR = BLUE if currPlayer > 0 else RED
+            col = int(input("Player " + COLOR + ("%d" % (currPlayer,)) +ENDC+", Enter column: "))
+            while col not in range(6):
+                print("Incorrect move!")
+                col = int(input("Player " + COLOR + ("%d" % (currPlayer,)) +ENDC+", Enter column: "))
             state, win = c4.simulate(col,currPlayer)
 
         print(c4)
-        print("Player %d wins!" % (win,))
+        COLOR = BLUE if win > 0 else RED
+        if win != 0:
+            print("Player " + COLOR + ("%d" % (win,)) +ENDC+" wins!")
+        else:
+            print(COLOR + "TIE!"+ENDC)
+            
+        play = "Y" in input("Play Again, Y/N? ")
+            
         
     
