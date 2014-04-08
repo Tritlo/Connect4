@@ -7,10 +7,9 @@ class connect4(object):
     #Creates new game
     def __init__(self, state = None, currPlayer = None,  shape = (7,6),):
         self.shape = shape 
-        if state is None:
-            self.state = zeros(shape)
+        self.state = zeros(shape) if state is  None else state
         self.win = None
-        self.currPlayer = currPlayer if currPlayer else 1
+        self.currPlayer = 1 if currPlayer is None else currPlayer
         self.color = True
 
     def getFeatures(self):
@@ -23,10 +22,14 @@ class connect4(object):
 
     #Make a legal move
     def makeRandomMove(self):
-        legal = lambda x: self.isLegal(x)
-        legalMoves = list(filter(legal,range(0,6)))
+        legalMoves = self.getLegalMoves()
         move = choice(legalMoves)
         return self.simulate(move)
+
+    def getLegalMoves(self):
+        legal = lambda x: self.isLegal(x)
+        return list(filter(legal,range(0,6)))
+        
 
     def isLegal(self,move):
         t = transpose(self.state)
@@ -49,7 +52,24 @@ class connect4(object):
         self.state = transpose(t)
         self.win = self.checkwin(self.state)
         return self.state, self.win
-    
+        
+    def rollout(self,move):
+        sumReward = 0
+        for i in range(5):
+            simulation = self.copy()
+            state,win = simulation.simulate(move)
+            while win is None:
+                state, win = simulation.makeRandomMove()
+            sumReward += win
+        return sumReward * currPlayer
+            
+        
+    def monteCarloPlay(self):
+        legalMoves = self.getLegalMoves()
+        rewards = [self.rollout(move) for move in legalMoves]
+        bestMove = legalMoves[argmax(rewards)]
+        return self.simulate(bestMove)
+        
     def __str__(self):
         oldOptions = get_printoptions()
         if self.color:
@@ -103,6 +123,7 @@ def colorPrinter(x):
         
 
 if __name__=="__main__":
+    """
     c4 = connect4()
     c4.simulate(0,1)
     c4.simulate(0,-1)
@@ -120,6 +141,8 @@ if __name__=="__main__":
     print(c4.simulate(3,1))
     print(c4.simulate(3,-1))
     print(c4.simulate(3,-1))
+    print(c4)
+    """
     
     color = True
 
@@ -133,7 +156,6 @@ if __name__=="__main__":
         return col
         
 
-    print(c4)
     
     GREEN = '\033[32m'
     BLUE = '\033[34m'
@@ -143,24 +165,40 @@ if __name__=="__main__":
     numPlayers = -1
     while numPlayers not in range(3):
         numPlayers = int(input("Enter number of players: "))
+    if numPlayers < 2:
+        posopponents = ["random","MC"]
+        opponentChoices = {}
+        print("Available opponents:")
+        for i,opponent in enumerate(posopponents):
+            print("%d. %s" % (i, opponent))
+        opponentChoices[-1] = posopponents[int(input("Pick opponent for -1: "))]
+        if numPlayers == 0:
+            opponentChoices[1] = posopponents[int(input("Pick opponent for 1: "))]
+        
+        
+    results = {-1: 0, 0: 0, 1: 0}
+    autoplayRounds = 60
+    interactive = False
     while play:
         c4 = connect4()
+        opponentActions = {"random": c4.makeRandomMove, "MC": c4.monteCarloPlay}
         win = None
         while win is None:
             print(c4)
+            print(results)
             currPlayer = c4.currPlayer
             COLOR = BLUE if currPlayer > 0 else RED
             if numPlayers == 0:
-                state, win = c4.makeRandomMove()
-            elif numPlayers == 2:
-                col = getInput(currPlayer)
-                state, win = c4.simulate(col)
-            else:
+                state, win = opponentActions[opponentChoices[currPlayer]]()
+            elif numPlayers == 1:
                 if currPlayer == 1:
                     col = getInput(currPlayer)
                     state, win = c4.simulate(col)
                 else:
-                    state, win = c4.makeRandomMove()
+                    state, win = opponentActions[opponentChoices[currPlayer]]()
+            else:
+                col = getInput(currPlayer)
+                state, win = c4.simulate(col)
                     
                 
 
@@ -170,8 +208,13 @@ if __name__=="__main__":
             print("Player " + COLOR + ("%d" % (win,)) +ENDC+" wins!")
         else:
             print(COLOR + "TIE!"+ENDC)
-            
-        play = input("Play Again, Y/N? ") not in ["N","n","no"]
+        results[win] += 1
+        if interactive:
+            play = input("Play Again, Y/N? ") not in ["N","n","no"]
+        else:
+            autoplayRounds -= 1
+            play = autoplayRounds > 0
+    print(results)
             
         
     
