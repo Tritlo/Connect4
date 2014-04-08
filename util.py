@@ -8,7 +8,8 @@ def dlogsig(n):
     return a*(1-a)
 
 
-location = array([[1, 2, 3, 4],
+winningLocations = array(
+[[1, 2, 3, 4],
 [ 2, 3, 4, 5],
 [ 3, 4, 5, 6],
 [ 7, 8, 9,10],
@@ -76,12 +77,12 @@ location = array([[1, 2, 3, 4],
 [21,28,35,42],
 [13,20,27,34],
 [20,27,34,41],
-[19,26,33,40]])
+[19,26,33,40]]) - 1
 
 
 def winningPosistion():
     C = zeros((69,42));
     for i in range(size(location,0)):
-        C[i,location[i,:] - 1] = 1;
-    return C,location
+        C[i,winningLocations[i,:]] = 1;
+    return C,winningLocations
     

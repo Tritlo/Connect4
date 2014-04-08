@@ -20,7 +20,7 @@ class connect4(object):
         column = action
         self.state[row][column] = colour
         self.state = transpose(t)
-        self.win = self.checkwin(colour,row,column)
+        self.win = self.checkwin(self.state)
         return self.state, self.win
     
     def __str__(self):
@@ -30,37 +30,14 @@ class connect4(object):
         return win
 
     # 0 is draw, 1,-1 is win for that colour, None is game not over
-    def checkwin(self, colour, row, column):
-        s = self.state
-        minrow = row - 4 if row - 4 > 0 else 0
-        maxrow = row + 4 if row + 4 < self.shape[0] else self.shape[0]
-        mincol = column - 4 if column - 4 > 0 else 0
-        maxcol = column + 4 if column + 4 < self.shape[1] else self.shape[1]
-        
-        #Horiz
-        for j in range(mincol, maxcol-3):
-            if all(s[row][j:j+4] == colour):
-                return colour, "horiz"
-                    
-        #Verti
-        if row + 4 < self.shape[0]:
-            if all(transpose(s[row:row+4][:])[column] == colour):
-                return colour
+    def checkwin(self, state):
+        s = state.flatten()
+        for winpos in winningLocations:
+            posSum = sum(s[winpos])
+            if abs(posSum) == 4:
+                return sign(posSum)
 
-        #Check diagonals
-        sm = s[minrow:minrow+6,mincol:mincol+6]
-        smf = fliplr(sm)
-        for i in range(3):
-            dsms = [diagonal(sm,i) ,diagonal(sm,-i) ,diagonal(smf,i) ,diagonal(smf,-i)]
-            for dsm in dsms:
-                if colour in dsm and len(find(dsm == colour)) >= 4:
-                    for i in range(0,len(dsm)-3):
-                        if all(dsm[i:i+4] == colour):
-                            return colour
-                
-                
-        #Draw
-        if all(self.state,1)[0]:
+        if all(state,1)[0]:
             return 0
         return None
 
@@ -79,22 +56,25 @@ if __name__=="__main__":
     c4.simulate(2,-1)
     c4.simulate(3,-1)
     c4.simulate(3,1)
-    c4.simulate(3,1)
-    c4.simulate(3,1)
-    #print(c4.simulate(3,-1))
-    #print(c4)
-    c4 = connect4()
-    currPlayer = 1
+    print(c4.simulate(3,1))
+    print(c4.simulate(3,-1))
+    print(c4.simulate(3,-1))
     print(c4)
-    col = int(input("Player %d, Enter column: " % (currPlayer,)))
-    state, win = c4.simulate(col,currPlayer)
-    while win is None:
-        currPlayer *= -1
+    
+    play = False
+    if play:
+        c4 = connect4()
+        currPlayer = 1
         print(c4)
         col = int(input("Player %d, Enter column: " % (currPlayer,)))
         state, win = c4.simulate(col,currPlayer)
+        while win is None:
+            currPlayer *= -1
+            print(c4)
+            col = int(input("Player %d, Enter column: " % (currPlayer,)))
+            state, win = c4.simulate(col,currPlayer)
 
-    print(c4)
-    print("Player %d wins!" % (win,))
+        print(c4)
+        print("Player %d wins!" % (win,))
         
     
