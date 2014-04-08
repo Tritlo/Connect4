@@ -35,7 +35,8 @@ def findBlock(c4):
         c4Check = c4.copy()
         c4Check.currPlayer*=-1
         state,win = c4Check.simulate(col)
-        if win = -c4.currPlayer:
+        if win == -c4.currPlayer:
+            blockCol = col
     return blockCol
 
 def findWin(c4):
@@ -43,12 +44,13 @@ def findWin(c4):
     for col in range(6):	
         c4Check = c4.copy()
         state,win = c4Check.simulate(col)
-        if win = c4.currPlayer:
+        if win == c4.currPlayer:
+            winCol=col
     return winCol
 
 
 def smartermc(c4,numRollouts):
-	winningMove = findWin(c4)
+    winningMove = findWin(c4)
     blockMove = findBlock(c4)
     if winningMove != None:
         bestmove = winningMove
@@ -78,7 +80,7 @@ def smartermc(c4,numRollouts):
                 reward[i]=n
             cumreward[action] = sum(reward)
         bestmove=cumreward.index(max(cumreward))
-	c4.simulate(bestmove)
+    c4.simulate(bestmove)
 
 if __name__=="__main__":
-	c4=
+	c4=connect4()
