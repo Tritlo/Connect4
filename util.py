@@ -7,6 +7,11 @@ def dlogsig(n):
     a = logsig(n)
     return a*(1-a)
 
+def tansig(n):
+    return tanh(n)
+
+givenw = [3,4,5,5,4,3,4,6,8,8,6,4,5,8,11,11,8,5,7,10,13,
+     13,10,7,5,8,11,11,8,5,4,6,8,8,6,4,3,4,5,5,4,3]
 
 winningLocations = array(
 [[1, 2, 3, 4],

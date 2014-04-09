@@ -5,11 +5,12 @@ from util import *
 
 class connect4(object):
     #Creates new game
-    def __init__(self, state = None, currPlayer = None, alpha=0.5, shape = (7,6)):
+    def __init__(self, state = None, currPlayer = None, alpha=0.5, w = givenw,shape = (7,6)):
         self.shape = shape 
         self.state = zeros(shape) if state is  None else state
         self.win = None
         self.alpha = alpha
+        self.w = w
         self.currPlayer = 1 if currPlayer is None else currPlayer
         self.color = True
 
@@ -20,7 +21,9 @@ class connect4(object):
     def copy(self):
         return connect4(state = copy(self.state),
                         currPlayer = self.currPlayer,
-                        shape = self.shape)
+                        shape = self.shape,
+                        alpha = self.alpha,
+                        w = self.w)
 
     #Make a legal move
     def makeRandomMove(self):
@@ -116,6 +119,19 @@ class connect4(object):
         return None
             
 
+    def boardInversionHeuristic(self,sim):
+        features = sim.getFeatures()
+        w = self.w
+        legalMoves = sim.getLegalMoves()
+        phi = zeros((len(w),len(legalMoves)))
+        for i,move in enumerate(legalMoves):
+            cp = sim.copy()
+            cp.simulate(move)
+            phi[:,i] = cp.getFeatures()
+        #print(phi)
+        bestMove= legalMoves[argmax(sim.currPlayer*tansig(dot(w,phi)))]
+        return bestMove
+            
             
     def monteCarloPlay(self):
         legalMoves = self.getLegalMoves()
@@ -133,7 +149,7 @@ class connect4(object):
         return self.simulate(bestMove)
 
     
-    def heuristic(self,simulation):
+    def heuristic(self,sim):
         #Our heuristic here is very similar to
         #The one used by the monte carlo player,
         #Except that we use distance from the win
@@ -146,34 +162,39 @@ class connect4(object):
         #and win if possible (how much depends on alpha)
         #but also block in the better way if possible
         #alpha controls how fast the function drops
-        alpha = self.alpha #Default 0.5
+        alpha = self.alpha
+        #alpha = 0.9
         reward = 0
-        for i in range(10):
-            simulation = self.copy()
+        player = currPlayer
+        if sim.win is not None:
+            #Large win or punishment for win or loss
+            return sim.win*currPlayer*100
+        for i in range(5):
+            simulation = sim.copy()
             win = None
             count = 0
             while win is None:
-                count += 1
                 state, win = simulation.makeRandomMove()
+                count += 1
             #We exponent alpha to the power of moves.
             #Since it is < 1, it becomes smaller
             #The further away we are.
-            reward += win*(alpha**count)
+            reward += 10*win*(alpha**count)
         return reward*currPlayer
         
     
-    def heuristicPlay(self):
+    def heuristicPlay(self, heuristicFunc = None):
+        if heuristicFunc is None:
+            heuristicFunc = self.heuristic
         legalMoves = self.getLegalMoves()
+        simulation = self.copy()
         heuristicVals = []
-        maxVal = float("-inf")
-        bestMove = None
         for move in legalMoves:
-            simulation = self.copy()
-            state, win = simulation.simulate(move)
-            heuristicVal = self.heuristic(simulation)
-            if heuristicVal > maxVal:
-               maxVal = heuristicVal
-               bestMove = move
+            sim = simulation.copy()
+            state,win = sim.simulate(move)
+            heuristicVals.append(heuristicFunc(sim))
+        
+        bestMove = legalMoves[argmax(heuristicVals)]
         return self.simulate(bestMove)
             
             
@@ -216,7 +237,8 @@ class connect4(object):
 def resultsToString(results):
     st = ""
     for color in [-1,0,1]:
-        st += colors[color] + ": "+ str(results[color]) + " "  if color in results else ""
+        st += colors[color] + ": "+ str(results[color]) +\
+              " "  if color in results else ""
     return st    
 
 def colorPrinter(x):
@@ -256,14 +278,16 @@ if __name__=="__main__":
     while numPlayers not in range(3):
         numPlayers = int(input("Enter number of players: "))
     if numPlayers < 2:
-        posopponents = ["random","MC","MCPlus","Heuristic"]
+        posopponents = ["random","MC","MCPlus","Heuristic", "BoardInv"]
         opponentChoices = {}
         print("Available opponents:")
         for i,opponent in enumerate(posopponents):
             print("%d. %s" % (i, opponent))
-        opponentChoices[-1] = posopponents[int(input("Pick opponent for "+ colors[-1] +": "))]
+        opponentChoices[-1] = posopponents[int(input("Pick opponent for "+\
+                                                     colors[-1] +": "))]
         if numPlayers == 0:
-            opponentChoices[1] = posopponents[int(input("Pick opponent for "+ colors[1] +": "))]
+            opponentChoices[1] = posopponents[int(input("Pick opponent for "+\
+                                                        colors[1] +": "))]
         
         
     results = {-1: 0, 0: 0, 1: 0}
@@ -271,16 +295,16 @@ if __name__=="__main__":
     playedRounds = 0
     interactive = False
     startingPlayer = 1
-    BLUE = '\033[34m'
-    RED = '\033[31m'
-    ENDC = '\033[0m'
         
     while play:
         c4 = connect4(currPlayer = startingPlayer)
+        c4.w = givenw
+        boardInv = lambda : c4.heuristicPlay(heuristicFunc = c4.boardInversionHeuristic)
         opponentActions = {"random": c4.makeRandomMove,
                            "MC": c4.monteCarloPlay,
                            "MCPlus": c4.monteCarloPlayPlus,
-                           "Heuristic": c4.heuristicPlay }
+                           "Heuristic": c4.heuristicPlay,
+                           "BoardInv": boardInv}
         win = None
         while win is None:
             print(c4)
@@ -317,14 +341,9 @@ if __name__=="__main__":
             if playedRounds == totalRoundsToPlay/2:
                 print("Swapping players")
                 startingPlayer = -1
-                #opponentChoices[-1],opponentChoices[1] = opponentChoices[1],opponentChoices[-1]
-                #swapped = 1
     print("Final score: ")
     print(resultsToString(results))
     if opponentChoices:
         print("Methods: ")
         print(resultsToString(opponentChoices))
         
-#MC vs Random fer 56-4, MC i vil
-
-#MCPlus vs MC fer 46-14, MCPlus i vil
