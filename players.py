@@ -11,27 +11,28 @@ from connect4 import *
     c4.simulate(action,player)
 """
 def randommc(c4,numRollouts):
-	cumreward = [0]*6
-	for action in (col for col in range(6) if c4[6][col]==0):
-		reward = range(numRollouts) 
-		for i in range(numRollouts):
-			c4temp = c4.copy()
-			win = None
-			state,win =c4temp.simulate(action)
-			while win is None:
-				state,win = c4temp.makeRandomMove()
-			if win == 0:
-				r = 0.5
-			else:
-				r = win*c4.currPlayer
-			reward[i]=n
-		cumreward[action] = sum(reward)
-	bestmove=cumreward.index(max(cumreward))
-	c4.simulate(bestmove)
+    cumreward = [-8]*7
+    for action in (col for col in range(6) if c4.isLegal(col)):
+        reward = [0]*numRollouts 
+        for i in range(numRollouts):
+            c4temp = c4.copy()
+            win = None
+            state,win =c4temp.simulate(action)
+            while win is None:
+                state,win = c4temp.makeRandomMove()
+            if win == 0:
+                r = 0.5
+            else:
+                r = win*c4.currPlayer
+            reward[i] = r
+        cumreward[action] = sum(reward)
+    bestmove = cumreward.index(max(cumreward))
+    state, win = c4.simulate(bestmove)
+    return state, win
 
 def findBlock(c4):
     blockCol = None
-    for col in range(6):	
+    for col in (col for col in range(6) if c4.isLegal(col)):
         c4Check = c4.copy()
         c4Check.currPlayer*=-1
         state,win = c4Check.simulate(col)
@@ -41,7 +42,7 @@ def findBlock(c4):
 
 def findWin(c4):
     winCol = None
-    for col in range(6):	
+    for col in (col for col in range(6) if c4.isLegal(col)):
         c4Check = c4.copy()
         state,win = c4Check.simulate(col)
         if win == c4.currPlayer:
@@ -57,9 +58,9 @@ def smartermc(c4,numRollouts):
     elif blockMove != None:
         bestmove = blockMove
     else:
-        cumreward = [0]*6 
-        for action in (col for col in range(6) if c4[6][col]==0):
-            reward = range(numRollouts) 
+        cumreward = [-8]*7 
+        for action in (col for col in range(6) if c4.isLegal(col)):
+            reward = [0]*numRollouts 
             for i in range(numRollouts):
                 c4temp = c4.copy()
                 win = None
@@ -77,10 +78,32 @@ def smartermc(c4,numRollouts):
                     r = 0.5
                 else:
                     r = win*c4.currPlayer
-                reward[i]=n
+                reward[i]=r
             cumreward[action] = sum(reward)
         bestmove=cumreward.index(max(cumreward))
-    c4.simulate(bestmove)
+    state, win = c4.simulate(bestmove)
+    return state, win
 
 if __name__=="__main__":
-	c4=connect4()
+    c4=connect4()
+    play = True
+    results = {-1: 0, 0: 0, 1: 0}
+    autoplayRounds = 2
+    while play:
+        c4 = connect4()
+        win = None
+        while win is None:
+            if c4.currPlayer ==1:
+                state, win = randommc(c4,5)
+            else:
+                state,win = smartermc(c4,5)
+        print(c4)
+        COLOR = "BLUE" if win > 0 else "RED"
+        if win != 0:
+            print("Player " + COLOR + ("%d" % (win,))+"wins!")
+        else:
+            print(COLOR + "TIE!")
+        results[win] += 1
+        autoplayRounds -= 1
+        play = autoplayRounds > 0
+    print(results)
