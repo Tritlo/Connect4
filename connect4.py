@@ -118,6 +118,47 @@ class connect4(object):
             return blockMove
         return None
             
+    def learnWFromTd0(self, eps = 0.1, alpha = 0.01, numEpisodes = 10000):
+        n = len(self.getFeatures())
+        w = zeros(n,)
+        for episode in range(numEpisodes):
+            trainee = connect4(w = w)
+            phi = zeros((n,2))
+            counter = 0
+            while trainee.win is None:
+                counter += 1
+                legalMoves = trainee.getLegalMoves()
+                if (rand(1)[0] < eps):
+                    move = choice(legalMoves)
+                else:
+                    move = trainee.boardInversionHeuristic(trainee)
+                player = trainee.currPlayer
+                playerInd = (player+1)//2
+                trainee.simulate(move)
+                phinew = player*trainee.getFeatures()
+                if(counter > 2):
+                    w +=  alpha*(logsig(dot(w,phinew)) -logsig((dot(w,phi[:,playerInd]))))\
+                        *dlogsig(dot(w,phi[:,playerInd]))*transpose(phi[:,playerInd])
+                phi[:,playerInd] = phinew
+            if trainee.win == 1:
+                reward = 1
+            elif trainee.win == -1:
+                reward = 0
+            else:
+                reward = 0.5
+            w += alpha*(reward - logsig(dot(w,phi[:,0])))*dlogsig(dot(w,phi[:,0]))\
+                 *transpose(phi[:,0])
+            w += alpha*((1-reward) - logsig(dot(w,phi[:,1])))*dlogsig(dot(w,phi[:,1]))\
+                 *transpose(phi[:,1])
+            print("Learning epsiode %d of %d" %(episode, numEpisodes),end="\r")
+        self.w = w
+        return w
+        
+                
+                  
+            
+        
+        
 
     def boardInversionHeuristic(self,sim):
         features = sim.getFeatures()
@@ -128,7 +169,6 @@ class connect4(object):
             cp = sim.copy()
             cp.simulate(move)
             phi[:,i] = cp.getFeatures()
-        #print(phi)
         bestMove= legalMoves[argmax(sim.currPlayer*tansig(dot(w,phi)))]
         return bestMove
             
@@ -257,7 +297,6 @@ def colorPrinter(x):
         
 
 if __name__=="__main__":
-    
     color = True
     GREEN = '\033[32m'
     BLUE = '\033[34m'
@@ -295,9 +334,14 @@ if __name__=="__main__":
     playedRounds = 0
     interactive = False
     startingPlayer = 1
-        
+    w = None
     while play:
         c4 = connect4(currPlayer = startingPlayer)
+        if w is not None:
+            c4.w = w
+        elif "BoardInv" in opponentChoices.values():
+            print("BoardInv chosen, learning w")
+            w = c4.learnWFromTd0(numEpisodes = 2000)
         c4.w = givenw
         boardInv = lambda : c4.heuristicPlay(heuristicFunc = c4.boardInversionHeuristic)
         opponentActions = {"random": c4.makeRandomMove,
