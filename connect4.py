@@ -118,7 +118,8 @@ class connect4(object):
             return blockMove
         return None
             
-    def learnWFromTd0(self, eps = 0.1, alpha = 0.01, numEpisodes = 10000):
+    def learnWFromTd0(self, eps = 0.1, alpha = 0.01,
+                      numEpisodes = 10000, showTraining = False):
         n = len(self.getFeatures())
         w = zeros(n,)
         for episode in range(numEpisodes):
@@ -126,6 +127,9 @@ class connect4(object):
             phi = zeros((n,2))
             counter = 0
             while trainee.win is None:
+                if showTraining:
+                    print(trainee)
+                    print("Learning epsiode %d of %d" %(episode, numEpisodes))
                 counter += 1
                 legalMoves = trainee.getLegalMoves()
                 if (rand(1)[0] < eps):
@@ -150,7 +154,8 @@ class connect4(object):
                  *transpose(phi[:,0])
             w += alpha*((1-reward) - logsig(dot(w,phi[:,1])))*dlogsig(dot(w,phi[:,1]))\
                  *transpose(phi[:,1])
-            print("Learning epsiode %d of %d" %(episode, numEpisodes),end="\r")
+            if not showTraining:
+                print("Learning epsiode %d of %d" %(episode, numEpisodes),end="\r")
         self.w = w
         return w
         
@@ -324,9 +329,11 @@ if __name__=="__main__":
             print("%d. %s" % (i, opponent))
         opponentChoices[-1] = posopponents[int(input("Pick opponent for "+\
                                                      colors[-1] +": "))]
+        print(opponentChoices[-1]+" chosen")
         if numPlayers == 0:
             opponentChoices[1] = posopponents[int(input("Pick opponent for "+\
                                                         colors[1] +": "))]
+            print(opponentChoices[1]+" chosen")
         
         
     results = {-1: 0, 0: 0, 1: 0}
