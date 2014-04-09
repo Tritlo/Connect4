@@ -5,15 +5,17 @@ from util import *
 
 class connect4(object):
     #Creates new game
-    def __init__(self, state = None, currPlayer = None,  shape = (7,6),):
+    def __init__(self, state = None, currPlayer = None, alpha=0.5, shape = (7,6)):
         self.shape = shape 
         self.state = zeros(shape) if state is  None else state
         self.win = None
+        self.alpha = alpha
         self.currPlayer = 1 if currPlayer is None else currPlayer
         self.color = True
 
     def getFeatures(self):
-        return self.state[:]
+        cop = copy(self.state)
+        return cop.flatten()
     
     def copy(self):
         return connect4(state = copy(self.state),
@@ -28,7 +30,7 @@ class connect4(object):
 
     def getLegalMoves(self):
         legal = lambda x: self.isLegal(x)
-        return list(filter(legal,range(0,6)))
+        return list(filter(legal,range(0,self.shape[1])))
         
 
     def isLegal(self,move):
@@ -53,36 +55,142 @@ class connect4(object):
         self.win = self.checkwin(self.state)
         return self.state, self.win
         
-    def rollout(self,move, pickObvious = False):
+    def rollout(self,move):
         sumReward = 0
+        simmove = self.copy()
+        state,win = simmove.simulate(move)
         for i in range(5):
-            simulation = self.copy()
-            state,win = simulation.simulate(move)
+            simulation = simmove.copy()
             while win is None:
                 state, win = simulation.makeRandomMove()
             sumReward += win
         return sumReward * currPlayer
-            
+
+    def rolloutPlus(self,move):
+        sumReward = 0
+        player = self.currPlayer
+        simmove = self.copy()
+        state,win = simmove.simulate(move)
+        for i in range(5):
+            simulation = simmove.copy()
+            while win is None:
+                if simulation.currPlayer == player:
+                    obvMove = simulation.obviousMove()
+                    if  obvMove is not None:
+                        state,win = simulation.simulate(obvMove)
+                    else:
+                        state, win = simulation.makeRandomMove()
+                else:
+                    state, win = simulation.makeRandomMove()
+            sumReward += win
+        return sumReward * currPlayer
+
+
+    def winningMove(self):
+        legalMoves = self.getLegalMoves()
+        for move in legalMoves:
+            simulation = self.copy()
+            state, win = simulation.simulate(move)
+            if win == self.currPlayer:
+                return move
+        return None
+    
+    def blockMove(self):
+        legalMoves = self.getLegalMoves()
+        for move in legalMoves:
+            simulation = self.copy()
+            simulation.currPlayer = -1*self.currPlayer
+            state,win = simulation.simulate(move)
+            if win == -1*self.currPlayer:
+                return move
+        return None
         
+
+    def obviousMove(self):
+        winMove = self.winningMove()
+        if winMove is not None:
+            return winMove
+        blockMove = self.blockMove()
+        if blockMove is not None:
+            return blockMove
+        return None
+            
+
+            
     def monteCarloPlay(self):
         legalMoves = self.getLegalMoves()
         rewards = [self.rollout(move) for move in legalMoves]
         bestMove = legalMoves[argmax(rewards)]
         return self.simulate(bestMove)
+
+    def monteCarloPlayPlus(self):
+        obvMove = self.obviousMove()
+        if obvMove is not None:
+            return self.simulate(obvMove)
+        legalMoves = self.getLegalMoves()
+        rewards = [self.rolloutPlus(move) for move in legalMoves]
+        bestMove = legalMoves[argmax(rewards)]
+        return self.simulate(bestMove)
+
+    
+    def heuristic(self,simulation):
+        #Our heuristic here is very similar to
+        #The one used by the monte carlo player,
+        #Except that we use distance from the win
+        #As a metric as well, such that a 
+        #win in the next move is much better than a win
+        #Two moves later, and a loss in the next move
+        #Is worse than a loss two moves later
+        #And we average over 7 games.
+        #This would cause us to block if possible,
+        #and win if possible (how much depends on alpha)
+        #but also block in the better way if possible
+        #alpha controls how fast the function drops
+        alpha = self.alpha #Default 0.5
+        reward = 0
+        for i in range(10):
+            simulation = self.copy()
+            win = None
+            count = 0
+            while win is None:
+                count += 1
+                state, win = simulation.makeRandomMove()
+            #We exponent alpha to the power of moves.
+            #Since it is < 1, it becomes smaller
+            #The further away we are.
+            reward += win*(alpha**count)
+        return reward*currPlayer
+        
+    
+    def heuristicPlay(self):
+        legalMoves = self.getLegalMoves()
+        heuristicVals = []
+        maxVal = float("-inf")
+        bestMove = None
+        for move in legalMoves:
+            simulation = self.copy()
+            state, win = simulation.simulate(move)
+            heuristicVal = self.heuristic(simulation)
+            if heuristicVal > maxVal:
+               maxVal = heuristicVal
+               bestMove = move
+        return self.simulate(bestMove)
+            
+            
+            
+            
         
     def __str__(self):
         oldOptions = get_printoptions()
         if self.color:
-            set_printoptions(linewidth = 79,formatter = {"float":colorPrinter})
+            set_printoptions(linewidth = 100,formatter = {"float":colorPrinter})
             BLUE = '\033[34m'
             ENDC = '\033[0m'
             header = "\n ["
             header += BLUE +" 0"
-            header += "   1"
-            header += "   2"
-            header += "   3"
-            header += "   4"
-            header += "   5"+ ENDC
+            for i in range(1,self.shape[1]-1):
+                header += "   %d" %(i,)
+            header += "   " + str(self.shape[1]-1) + ENDC
             header += " ]\n\n" 
             end = "\n"
         else:
@@ -92,8 +200,6 @@ class connect4(object):
         set_printoptions(**oldOptions)
         return  s
 
-    def reward(self, colour, row, column):
-        return win
 
     # 0 is draw, 1,-1 is win for that colour, None is game not over
     def checkwin(self, state):
@@ -129,26 +235,6 @@ def colorPrinter(x):
         
 
 if __name__=="__main__":
-    """
-    c4 = connect4()
-    c4.simulate(0,1)
-    c4.simulate(0,-1)
-    c4.simulate(1,1)
-    c4.simulate(1,1)
-    c4.simulate(1,-1)
-    c4.simulate(2,1)
-    c4.simulate(2,1)
-    c4.simulate(2,1)
-    c4.simulate(4,1)
-    c4.simulate(5,1)
-    c4.simulate(2,-1)
-    c4.simulate(3,-1)
-    c4.simulate(3,1)
-    print(c4.simulate(3,1))
-    print(c4.simulate(3,-1))
-    print(c4.simulate(3,-1))
-    print(c4)
-    """
     
     color = True
     GREEN = '\033[32m'
@@ -159,7 +245,7 @@ if __name__=="__main__":
     colors = {-1: BLUE+"Blue"+ENDC, 0: "Ties", 1: RED+"Red"+ENDC}
     def getInput(currPlayer):
         col = int(input(colors[currPlayer] + " player, enter column: "))
-        while col not in range(6):
+        while col not in range(7):
             print("Incorrect move!")
             col = int(input(colors[currPlayer] + " player, enter column: "))
         return col
@@ -170,7 +256,7 @@ if __name__=="__main__":
     while numPlayers not in range(3):
         numPlayers = int(input("Enter number of players: "))
     if numPlayers < 2:
-        posopponents = ["random","MC"]
+        posopponents = ["random","MC","MCPlus","Heuristic"]
         opponentChoices = {}
         print("Available opponents:")
         for i,opponent in enumerate(posopponents):
@@ -181,7 +267,7 @@ if __name__=="__main__":
         
         
     results = {-1: 0, 0: 0, 1: 0}
-    totalRoundsToPlay = 10
+    totalRoundsToPlay = 60
     playedRounds = 0
     interactive = False
     startingPlayer = 1
@@ -191,7 +277,10 @@ if __name__=="__main__":
         
     while play:
         c4 = connect4(currPlayer = startingPlayer)
-        opponentActions = {"random": c4.makeRandomMove, "MC": c4.monteCarloPlay}
+        opponentActions = {"random": c4.makeRandomMove,
+                           "MC": c4.monteCarloPlay,
+                           "MCPlus": c4.monteCarloPlayPlus,
+                           "Heuristic": c4.heuristicPlay }
         win = None
         while win is None:
             print(c4)
@@ -215,7 +304,6 @@ if __name__=="__main__":
                 
 
         print(c4)
-        #COLOR = BLUE if win > 0 else RED
         if win != 0:
             print( colors[win] +" player wins!")
         else:
@@ -237,6 +325,6 @@ if __name__=="__main__":
         print("Methods: ")
         print(resultsToString(opponentChoices))
         
-            
-        
-    
+#MC vs Random fer 56-4, MC i vil
+
+#MCPlus vs MC fer 46-14, MCPlus i vil
