@@ -118,10 +118,11 @@ class connect4(object):
             return blockMove
         return None
             
-    def learnWFromTd0(self, eps = 0.1, alpha = 0.01,
-                      numEpisodes = 10000, showTraining = False):
+    def learnWFromTd(self, eps = 0.1, alpha = 0.01,
+                      numEpisodes = 10000, lamb =0, gamma= 1, showTraining = False):
         n = len(self.getFeatures())
         w = zeros(n,)
+        e = zeros((n,2))
         for episode in range(numEpisodes):
             trainee = connect4(w = w)
             phi = zeros((n,2))
@@ -140,9 +141,11 @@ class connect4(object):
                 playerInd = (player+1)//2
                 trainee.simulate(move)
                 phinew = player*trainee.getFeatures()
+                delta = 0 + gamma*logsig(dot(w,phinew)) -logsig((dot(w,phi[:,playerInd])))
+                e[:,playerInd] = gamma*lamb*e[:,playerInd]\
+                                 +dlogsig(dot(w,phi[:,playerInd]))*transpose(phi[:,playerInd])
                 if(counter > 2):
-                    w +=  alpha*(logsig(dot(w,phinew)) -logsig((dot(w,phi[:,playerInd]))))\
-                        *dlogsig(dot(w,phi[:,playerInd]))*transpose(phi[:,playerInd])
+                    w +=  alpha*delta*e[:,playerInd]
                 phi[:,playerInd] = phinew
             if trainee.win == 1:
                 reward = 1
@@ -150,20 +153,18 @@ class connect4(object):
                 reward = 0
             else:
                 reward = 0.5
-            w += alpha*(reward - logsig(dot(w,phi[:,0])))*dlogsig(dot(w,phi[:,0]))\
-                 *transpose(phi[:,0])
-            w += alpha*((1-reward) - logsig(dot(w,phi[:,1])))*dlogsig(dot(w,phi[:,1]))\
-                 *transpose(phi[:,1])
+            
+            deltapos = reward - logsig(dot(w,phi[:,0]))
+            deltaneg = (1-reward) - logsig(dot(w,phi[:,1]))
+            w += alpha*deltapos*e[:,0]
+            w += alpha*deltaneg*e[:,1]
             if not showTraining:
                 print("Learning epsiode %d of %d" %(episode, numEpisodes),end="\r")
         self.w = w
         return w
-        
                 
                   
             
-        
-        
 
     def boardInversionHeuristic(self,sim):
         features = sim.getFeatures()
@@ -319,8 +320,9 @@ if __name__=="__main__":
 
     play = True
     numPlayers = -1
+    verbose = bool(int(input("Display board? 1/0: ").split()[-1]))
     while numPlayers not in range(3):
-        numPlayers = int(input("Enter number of players: "))
+        numPlayers = int(input("Enter number of players: ").split()[-1])
     if numPlayers < 2:
         posopponents = ["random","MC","MCPlus","Heuristic", "BoardInv"]
         opponentChoices = {}
@@ -328,13 +330,12 @@ if __name__=="__main__":
         for i,opponent in enumerate(posopponents):
             print("%d. %s" % (i, opponent))
         opponentChoices[-1] = posopponents[int(input("Pick opponent for "+\
-                                                     colors[-1] +": "))]
+                                                     colors[-1] +": ").split()[-1])]
         print(opponentChoices[-1]+" chosen")
         if numPlayers == 0:
             opponentChoices[1] = posopponents[int(input("Pick opponent for "+\
-                                                        colors[1] +": "))]
+                                                        colors[1] +": ").split()[-1])]
             print(opponentChoices[1]+" chosen")
-        
         
     results = {-1: 0, 0: 0, 1: 0}
     totalRoundsToPlay = 60
@@ -348,7 +349,11 @@ if __name__=="__main__":
             c4.w = w
         elif "BoardInv" in opponentChoices.values():
             print("BoardInv chosen, learning w")
-            w = c4.learnWFromTd0(numEpisodes = 2000)
+            episodes = int(input("Enter episodes for TD: ").split()[-1])
+            print(episodes)
+            lamb = float(input("Enter lambda for TD: ").split()[-1])
+            print(lamb)
+            w = c4.learnWFromTd(numEpisodes = episodes,lamb = lamb)
         c4.w = givenw
         boardInv = lambda : c4.heuristicPlay(heuristicFunc = c4.boardInversionHeuristic)
         opponentActions = {"random": c4.makeRandomMove,
@@ -358,13 +363,15 @@ if __name__=="__main__":
                            "BoardInv": boardInv}
         win = None
         while win is None:
-            print(c4)
-            print("Score: ")
-            print(resultsToString(results))
+            if verbose:
+                print(c4)
+                print("Score: ")
+                print(resultsToString(results))
             currPlayer = c4.currPlayer
             if numPlayers == 0:
-                print("Method: ")
-                print(resultsToString(opponentChoices))
+                if verbose:
+                    print("Method: ")
+                    print(resultsToString(opponentChoices))
                 state, win = opponentActions[opponentChoices[currPlayer]]()
             elif numPlayers == 1:
                 if currPlayer == 1:
@@ -378,7 +385,11 @@ if __name__=="__main__":
                     
                 
 
-        print(c4)
+        if verbose:
+            print(c4)
+        else:
+            
+            print(resultsToString(results))
         if win != 0:
             print( colors[win] +" player wins!")
         else:
