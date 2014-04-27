@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 \input{/home/tritlo/Dropbox/Latex/header.tex}
-\usepackage{minted}
+%\usepackage{minted}
+\usepackage{listingsutf8}
 \nonums
 
 \title{Reiknigreind - Reikniverkefni 2}
@@ -97,8 +98,8 @@ hermanirnar virka, sérstaklega eftir að maður útfærði það sjálfur. Einn
 af featurespace, til þess að geta ráðið við hversu stórt það verður.
 
 \section{Viðauki}
-\inputminted{python}{../connect4.py}
-\inputminted{python}{../util.py}
+\lstinputlisting[language=Python,breaklines=true]{../connect4.py}
+\lstinputlisting[language=Python,breaklines=true]{../util.py}
 
 
 \end{document}
