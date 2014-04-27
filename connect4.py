@@ -15,10 +15,8 @@ class connect4(object):
         self.ntups = ntups 
         self.verbose = verbose
 
-    def getFeatures(self,useNtups = True):
-        if useNtups:
-            if self.ntups is None:
-                self.makeNtups()
+    def getFeatures(self):
+        if self.ntups is not None:
             ks = []
             N = 0
             for tup in self.ntups:
@@ -37,8 +35,8 @@ class connect4(object):
         return phi
 
     def makeNtups(self,n=8,numtups=70):
-        if self.verbose:
-            print("Creating %d %d-tuples" % (numtups,n))
+        #if self.verbose:
+        print("Creating %d %d-tuples" % (numtups,n))
         ntups = []
         for i in range(numtups):
             if self.verbose:
@@ -163,7 +161,9 @@ class connect4(object):
             
     def learnWFromTd(self, eps = 0.1, alpha = 0.01,
                       numEpisodes = 10000, lamb =0, gamma= 1, useNtups = True):
-        n = len(self.getFeatures(useNtups=useNtups))
+        if useNtups:
+            self.makeNtups()
+        n = len(self.getFeatures())
         w = zeros(n,)
         ntups = self.ntups
         e = zeros((n,2))
@@ -174,7 +174,7 @@ class connect4(object):
             while trainee.win is None:
                 if self.verbose:
                     print(trainee)
-                    print("Learning epsiode %d of %d" %(episode, numEpisodes))
+                    print("Learning episode %d of %d" %(episode, numEpisodes))
                 counter += 1
                 legalMoves = trainee.getLegalMoves()
                 if (rand(1)[0] < eps):
@@ -184,7 +184,7 @@ class connect4(object):
                 player = trainee.currPlayer
                 playerInd = (player+1)//2
                 trainee.simulate(move)
-                phinew = player*trainee.getFeatures(useNtups=useNtups)
+                phinew = player*trainee.getFeatures()
                 delta = 0 + gamma*logsig(dot(w,phinew)) -logsig((dot(w,phi[:,playerInd])))
                 e[:,playerInd] = gamma*lamb*e[:,playerInd]\
                                  +dlogsig(dot(w,phi[:,playerInd]))*transpose(phi[:,playerInd])
@@ -203,7 +203,7 @@ class connect4(object):
             w += alpha*deltapos*e[:,0]
             w += alpha*deltaneg*e[:,1]
             if not self.verbose: 
-                print("Learning epsiode %d of %d" %(episode, numEpisodes),end="\r")
+                print("Learning episode %d of %d" %(episode, numEpisodes),end="\r")
         self.w = w
         return w
                 
@@ -390,10 +390,12 @@ if __name__=="__main__":
     interactive = False
     startingPlayer = 1
     w = None
+    ntups = None
     while play:
         c4 = connect4(currPlayer = startingPlayer,verbose=dispTrain)
         if w is not None:
             c4.w = w
+            c4.ntups = ntups
         elif "BoardInv" or "N-tups" in opponentChoices.values():
             print("TD chosen, learning w")
             episodes = int(input("Enter episodes for TD: ").split()[-1])
@@ -402,10 +404,11 @@ if __name__=="__main__":
             print(lamb)
             if "N-tups" in opponentChoices.values():
                 w = c4.learnWFromTd(numEpisodes = episodes, lamb = lamb)
+                ntups = c4.ntups
             else:
                 w = c4.learnWFromTd(numEpisodes = episodes,
                                     lamb = lamb,useNtups = False)
-        c4.w = givenw
+        #c4.w = givenw
         boardInv = lambda : c4.heuristicPlay(heuristicFunc = c4.boardInversionHeuristic)
         opponentActions = {"random": c4.makeRandomMove,
                            "MC": c4.monteCarloPlay,

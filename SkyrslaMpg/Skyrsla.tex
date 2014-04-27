@@ -1,0 +1,104 @@
+\documentclass[12pt]{article}
+\input{/home/tritlo/Dropbox/Latex/header.tex}
+\usepackage{listingsutf8}
+\nonums
+
+\title{Reiknigreind - Reikniverkefni 2}
+\author{Matthías Páll Gissurarson}
+
+\begin{document}
+\maketitle
+
+\section{Monte Carlo Spilari}
+
+Niðurstöður:
+Þegar \verb|Monte Carlo| spilaði við Random, þá vann \verb|Monte Carlo|  46 skipti af 60,
+svo \verb|Monte Carlo|p hefur töluvert mikið forskot á móti random spilara.
+
+Hinsvegar, þá fer \verb|Monte Carlo| vs. \verb|Monte Carlo Plus| $15-5-40$,
+þ.e. \verb|Monte Carlo Plus| vann 40 skipti af 60, eða $2/3$, og $5$ jafntefli. Það er töluvert forskot,
+en oftast þegar \verb|Monte Carlo| vann, þá var það vegna þess að hann var kominn með svikamyllu,
+þ.e. þannig að sama hvað \verb|Monte Carlo Plus| gerði, þá mundi \verb|Monte Carlo| vinna.
+
+
+\section{Heuristic}
+
+Ég ákvað að prófa probabilisitc heuristic, sem metur hag gildi (utility value) ástands
+útfrá því hve langt það er frá sigri/tapi, þ.e. gefur hátt utility fyrir skjótan sigur,
+(og því ætti hann að velja það að blokka/sigra ef það er í boði),
+en lægra fyrir sigur sem er lengra í burtu.
+Einnig er gefin mikil refsing ef núverandi spilari er búinn að tapa,
+en mikill ávinningur ef hann er búinn að vinna.
+
+Þegar \verb|Heuristic| keppir við \verb|Monte Carlo|
+þá sigrar það í $54$ skipti af $60$, sem er betra en gengið hjá \verb|Monte Carlo Plus|
+Þegar það keppir við \verb|Monte Carlo Plus|, þá er staðan hinsvegar jöfn,
+$30-30$, svo það virðist sem það sé jafn gott og \verb|Monte Carlo Plus|,
+en það kemur heim og saman við það að \verb|Heuristic| er að hegða sér mjög líkt
+\verb|Monte Carlo Plus|.
+
+Þegar \verb|Heuristic| keppir við \verb|Board Inversion Heursitic|, þá fer það $57-3$ fyrir
+\verb|Heuristic|, svo \verb|Heuristic| virðist vera betra mat á stöðunni en board inversion,
+með $w$ sem $w$ sem gefið er í kynningunni.
+
+Þegar \verb|Board Inversion Heuristic| keppir við \verb|Monte Carlo|, þá fer það $49-11$ fyrir
+\verb|Monte Carlo|.
+
+
+\section{Reinforcement Learning}
+
+Við forritið var bætt við $TD(\lambda)$ útfærslu,
+sem var unnin út frá $TD(0)$ matlab lausninni sem við fengum gefna.
+Þegar $\lambda = 0$, þá hagar það sér eins og $TD(0)$, og skilar álíka win-rate og það gerði
+fyrir $TD(0)$, sem bendir til þess að útfærslan sé rétt.
+$TD(1)$ hagar sér eins og \verb|Monte Carlo| skv. fræðunum, en með $\lambda = 1$
+fæ ég mjög álíkt winrate og \verb|Monte-Carlo| gegn random, en hinsvegar þegar að ég
+læt það keppa við \verb|Monte Carlo|, þá virðist það ganga mun verr, en það sigrar
+aðeins $13$ skipti af $60$. Það er sennilega vegna þess að í \verb|Monte-Carlo|
+er ég að taka meðaltal útfrá stöðunni eins og hún er núna, en í \verb|Board Inversion Heuristic|
+með $\lambda = 1$ er ég í raun ekki að taka mið út frá stöðunni eins og hún er, heldur
+er ég  bara að byggja á því sem ég hef séð áður. Þegar $\lambda = 0.7$,
+þá er þetta ennþá verra, en á móti \verb|Monte Carlo|, þá fer leikurinn
+$11-3-46$, þ.e. \verb|Board Inversion Heuristic| sigrar $11$ leiki af $60$,
+og það eru $3$ jafntefli. Það verður að teljas frekar slappt,
+svo hugsanlega er galli í implementationinu á $TD(\lambda)$
+
+\verb|Board Inversion Heuristic| mundi sennilega standa sig betur ef það væri þjálfað
+í fleiri episode, en hjá mér eru það aðeins $2000$ epsiode sem það fer í gegnum,
+en það er sökum þess hve lengi þetta tekur að keyra. Einnig væri hægt að tune-a
+gildin á $\lambda, \alpha$ og $\gamma$ í forritinu til þess að fá betri niðurstöður.
+
+\verb|N-tuples| voru implementuð á svipaðan hátt og þau voru gerð í sýnidæmi,
+þ.e. þau voru generateu-ð þannig að þau væru eins og snákar í borðinu, en ekki
+random eins og stungið var uppá. Þau voru síðan notuð til að þjálfa vigtir fyrir
+þau tuple.
+
+Þjálfun á spilaranum fyrir \verb|N-tuples| tók rosalega langan tíma,
+en það er sennilega vegna þess að það var ekki útfært með fylkjum, heldur
+með einfaldari hlutum í python. Það var því ekki þjálfað fyrir fleiri en $2000$ episode.
+
+Þar sem að þetta eru heldur fá episode (talað er um 100 milljón episode 
+í greininni), þá stóð \verb|N-tuples| sig frekar illa á móti \verb|Monte-Carlo Plus|
+(selective útgáfunni), en staðan var $4-56$ \verb|Monte-Carlo Plus| í vil.
+Þar sem að \verb|Monte-Carlo Plus| var mjög álíkt mínu Heuristic,
+þá áætlum við að það muni fara svipað gegn því.
+
+Það verður að teljast heldur slappt, en eins og bent hefur verið á, þá mundi
+niðurstaðan vera mjög ólík ef þjálfuð væru fleiri episode. Sennilega
+væri hægt að bæta þessa niðurstöðu með því að láta vigtirnar vera þjálfaðar
+gegn \verb|Monte-Carlo Plus| spilara, frekar en random eins og gert er,
+því þá mundi \verb|N-tuples| miða frekar að að vinna þann spilara.
+
+
+\section{Hvað ég hef lært}
+Eftir að hafa unnið þetta verkefni hef ég núna mun betri skilning á hvernig TD og Monte Carlo
+hermanirnar virka, sérstaklega eftir að maður útfærði það sjálfur. Einnig veitti
+útfærslan á N-tuples mér innsýn yfir í hvernig má búa til sniðugt subspace
+af featurespace, til þess að geta ráðið við hversu stórt það verður.
+
+\section{Viðauki}
+\lstinputlisting[language=Python,breaklines=true]{../connect4.py}
+\lstinputlisting[language=Python,breaklines=true]{../util.py}
+
+
+\end{document}

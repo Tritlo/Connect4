@@ -2,6 +2,6 @@ verbose 0
 trainboard 0
 players 0
 Blue is ntup 5
-Red is random 0
+Red is mcplus 2
 episodes is 2000
 lambda is 0
