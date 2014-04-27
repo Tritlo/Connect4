@@ -1,2 +1,2 @@
-ntupVRandom:
-	python3 connect4.py < inp
+ntupvsmcp:
+	python3 connect4.py < mcpvsntup
