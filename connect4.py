@@ -2,10 +2,9 @@ from random import choice
 from pylab import *
 from util import *
 
-
 class connect4(object):
     #Creates new game
-    def __init__(self, state = None, currPlayer = None, alpha=0.5, w = givenw,shape = (7,6)):
+    def __init__(self, state = None, currPlayer = None, alpha=0.5, w = givenw, ntups = None, verbose = False, shape = (7,6)):
         self.shape = shape 
         self.state = zeros(shape) if state is  None else state
         self.win = None
@@ -13,17 +12,61 @@ class connect4(object):
         self.w = w
         self.currPlayer = 1 if currPlayer is None else currPlayer
         self.color = True
+        self.ntups = ntups 
+        self.verbose = verbose
 
-    def getFeatures(self):
-        cop = copy(self.state)
-        return cop.flatten()
+    def getFeatures(self,useNtups = True):
+        if useNtups:
+            if self.ntups is None:
+                self.makeNtups()
+            ks = []
+            N = 0
+            for tup in self.ntups:
+                N += 3**len(tup)
+                k = 0
+                for i,(x,y) in enumerate(tup):
+                    s = self.state[x,y]
+                    s = 1 if s < 0 else 2 if s > 0 else 0
+                    k += s*3**i #3 possible states
+                ks.append(k)
+            phi = zeros((N,))
+            phi[ks] = 1
+        else:
+            cop = copy(self.state)
+            phi = cop.flatten()
+        return phi
+
+    def makeNtups(self,n=8,numtups=70):
+        if self.verbose:
+            print("Creating %d %d-tuples",numtups,n)
+        ntups = []
+        for i in range(numtups):
+            if self.verbose:
+                print("Creating tuple %d" %(i,))
+            x,y = randint(0,self.shape[0]), randint(0,self.shape[1])
+            snake = []
+            for _ in range(n):
+                snake.append((x,y))
+                while (x,y) in snake:
+                    minx = -1 if x-1 >= 0 else 0 #Inclusive
+                    maxx = 2 if x+1 < self.shape[0] else 1 #Exclusive
+                    miny = -1 if y-1 >= 0 else 0
+                    maxy = 2 if y+1 < self.shape[1] else 1
+                    x += randint(minx,maxx)
+                    y += randint(miny,maxy)
+            ntups.append(snake)
+        self.ntups = ntups
+
     
     def copy(self):
         return connect4(state = copy(self.state),
                         currPlayer = self.currPlayer,
                         shape = self.shape,
                         alpha = self.alpha,
-                        w = self.w)
+                        w = self.w,
+                        ntups = self.ntups,
+                        verbose = self.verbose)
+
 
     #Make a legal move
     def makeRandomMove(self):
@@ -119,7 +162,7 @@ class connect4(object):
         return None
             
     def learnWFromTd(self, eps = 0.1, alpha = 0.01,
-                      numEpisodes = 10000, lamb =0, gamma= 1, showTraining = False):
+                      numEpisodes = 10000, lamb =0, gamma= 1):
         n = len(self.getFeatures())
         w = zeros(n,)
         e = zeros((n,2))
@@ -128,7 +171,7 @@ class connect4(object):
             phi = zeros((n,2))
             counter = 0
             while trainee.win is None:
-                if showTraining:
+                if self.verbose:
                     print(trainee)
                     print("Learning epsiode %d of %d" %(episode, numEpisodes))
                 counter += 1
@@ -321,6 +364,7 @@ if __name__=="__main__":
     play = True
     numPlayers = -1
     verbose = bool(int(input("Display board? 1/0: ").split()[-1]))
+    dispTrain = bool(int(input("Display Training? 1/0: ").split()[-1]))
     while numPlayers not in range(3):
         numPlayers = int(input("Enter number of players: ").split()[-1])
     if numPlayers < 2:
@@ -344,7 +388,7 @@ if __name__=="__main__":
     startingPlayer = 1
     w = None
     while play:
-        c4 = connect4(currPlayer = startingPlayer)
+        c4 = connect4(currPlayer = startingPlayer,verbose=dispTrain)
         if w is not None:
             c4.w = w
         elif "BoardInv" in opponentChoices.values():
